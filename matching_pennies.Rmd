@@ -47,11 +47,10 @@ df_f <- function(player1, player2, trials) {
 }
 
 plot_f <- function(df, player1, player2, trials) {
-  plot <- ggplot(df) + 
-  theme_classic() + 
-  geom_line(color = "red", aes(trials, player1)) + 
-  geom_line(color = "blue", aes(trials, player2))
-  
+  plot <- ggplot(df) +
+    theme_classic() +
+    geom_line(color = "red", aes(trials, player1)) + #red is P1
+    geom_line(color = "blue", aes(trials, player2))  # blue is P2
   return (plot)
 }
 
@@ -70,12 +69,13 @@ plot_winrate_f <- function(df) {
 
 
 ```{r}
+#some setup
 trials <- 120
 n_participants <- 100 #unused but needed for the report(?)
 randomChoice <- (rep(NA,trials))
 rate <- 0.5
 
-#random
+#random (generate answers)
 for (t in seq(trials)){
   randomChoice[t] <- RandomAgent_f(rate)
 }
@@ -86,7 +86,6 @@ p1 <- ggplot(d1, aes(trial,choice)) + geom_line() + theme_classic()
 
 ```{r}
 #WSLS playing against Random
-
 WSLSChoice <- rep(NA, trials)
 WSLSChoice[1] <- RandomAgent_f(rate) #picks random on first trial
 
@@ -108,7 +107,7 @@ df <- df_f(randomChoice, WSLSChoice, trials)
 plot_f(df, randomChoice, WSLSChoice, trials )
 ```
 ```{r}
-#winrate plot of Random vs WSLS
+#winrate plot of Random vs WSLS (WSLS is blue)
 winrate_plot <- plot_winrate_f(df)
 winrate_plot
 ```
@@ -163,7 +162,7 @@ StratSwitcherChoice_against_WSLS <- StratSwitcherChoice_f(Other_Player = WSLSCho
 
 #Shitty plots
 ```{r}
-#plots of stratswitcher against RANDOM
+#plots of stratswitcher against RANDOM (BLUE is the StratSwitcher)
 df1 <- df_f(randomChoice, StratSwitcherChoice_against_Random, trials)
 plot_f(df1, randomChoice, StratSwitcherChoice_against_Random, trials )
 
@@ -174,7 +173,7 @@ winrate_plot1
 
 
 ```{r}
-#plots of stratswitcher against WSLS
+#plots of stratswitcher against WSLS (BLUE is the StratSwitcher)
 df2 <- df_f(WSLSChoice, StratSwitcherChoice_against_WSLS, trials)
 plot_f(df2, WSLSChoice, StratSwitcherChoice_against_WSLS, trials )
 

@@ -1,0 +1,36 @@
+---
+title: "Penny-Matching"
+output: html_document
+date: "2026-02-13"
+---
+
+```{r}
+install.packages("pacman")
+pacman::p_load(tidyverse)
+```
+
+
+```{r}
+RandomAgent_f <- function(input, parameters, rate){
+  choice <- rbinom(1,1,rate)
+  return (choice)
+}
+```
+
+
+```{r}
+trials <- 120
+n_participants <- 100
+
+randomChoice <- (rep(NA,trials))
+rate <- 0.5
+
+for (t in seq(trials)){
+  randomChoice[t] <- RandomAgent_f(0, 0, rate)
+}
+
+d1 <- tibble(trial = seq(trials), choice = randomChoice)
+p1 <- ggplot(d1, aes(trial,choice)) + geom_line() + theme_classic()
+```
+
+

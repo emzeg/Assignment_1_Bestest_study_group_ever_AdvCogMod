@@ -10,10 +10,10 @@ pacman::p_load(tidyverse, ggplot2, tibble)
 set.seed(1234)
 ```
 
-Code from the Slides!
+Code from the Slides and implemented one player (stratswitcher); some of the default plots from the slides
 
 ```{r}
-#the two default players (add 2 more)
+#the two default players
 
 #entirely random
 RandomAgent_f <- function(rate){
@@ -33,11 +33,45 @@ WSLSAgent_f <- function(prevChoice, feedback){
 
 ```
 
+```{r}
+#plotting & df functions
+#(simple, just dont want to repeat the code over and over, still need better plots)
+df_f <- function(player1, player2, trials) {
+  df <- tibble(
+    player1,
+    player2,
+    trials = seq(trials),
+    feedback = as.numeric(player1 == player2)
+  )
+  return (df)
+}
+
+plot_f <- function(df, player1, player2, trials) {
+  plot <- ggplot(df) + 
+  theme_classic() + 
+  geom_line(color = "red", aes(trials, player1)) + 
+  geom_line(color = "blue", aes(trials, player2))
+  
+  return (plot)
+}
+
+#plot winrate
+plot_winrate_f <- function(df) {
+  df <- df %>% 
+  mutate(cumulative_rateSelf= cumsum(feedback) / seq_along(feedback),
+         cumulative_rateOther= cumsum(1-feedback) / seq_along(feedback) )
+
+  winrate_plot <- ggplot(df) + theme_classic() + geom_line(color="red", aes(trials, cumulative_rateSelf)) + geom_line(color="blue", aes(trials, cumulative_rateOther))
+  
+  return (winrate_plot) #not returning the df for now? (though changing it)
+}
+
+```
+
 
 ```{r}
 trials <- 120
-n_participants <- 100 #unused
-
+n_participants <- 100 #unused but needed for the report(?)
 randomChoice <- (rep(NA,trials))
 rate <- 0.5
 
@@ -48,8 +82,6 @@ for (t in seq(trials)){
 
 d1 <- tibble(trial = seq(trials), choice = randomChoice)
 p1 <- ggplot(d1, aes(trial,choice)) + geom_line() + theme_classic()
-
-p1
 ```
 
 ```{r}
@@ -71,18 +103,14 @@ df <- tibble(
   WSLSChoice,
   trials = seq(trials),
   feedback = as.numeric(randomChoice == WSLSChoice)) 
-  
-ggplot(df) + 
-  theme_classic() + 
-  geom_line(color = "red", aes(trials, randomChoice)) + 
-  geom_line(color = "blue", aes(trials, WSLSChoice))
+
+df <- df_f(randomChoice, WSLSChoice, trials)
+plot_f(df, randomChoice, WSLSChoice, trials )
 ```
 ```{r}
-df <-df %>% 
-  mutate(cumulative_rateSelf= cumsum(feedback) / seq_along(feedback),
-         cumulative_rateOther= cumsum(1-feedback) / seq_along(feedback) )
-
-ggplot(df) + theme_classic() + geom_line(color="red", aes(trials, cumulative_rateSelf)) + geom_line(color="blue", aes(trials, cumulative_rateOther))
+#winrate plot of Random vs WSLS
+winrate_plot <- plot_winrate_f(df)
+winrate_plot
 ```
 ### ACTUAL competitor against Random & WSLS (Strategy Switcher)
 ```{r}
@@ -135,29 +163,23 @@ StratSwitcherChoice_against_WSLS <- StratSwitcherChoice_f(Other_Player = WSLSCho
 
 #Shitty plots
 ```{r}
-#these should be made into functions
-df1 <- tibble(
-  randomChoice,
-  StratSwitcherChoice_against_Random,
-  trials = seq(trials),
-  feedback = as.numeric(randomChoice == StratSwitcherChoice_against_Random)) #not using Other/Self
-  
-ggplot(df1) + 
-  theme_classic() + 
-  geom_line(color = "red", aes(trials, randomChoice)) + 
-  geom_line(color = "blue", aes(trials, StratSwitcherChoice_against_Random))
+#plots of stratswitcher against RANDOM
+df1 <- df_f(randomChoice, StratSwitcherChoice_against_Random, trials)
+plot_f(df1, randomChoice, StratSwitcherChoice_against_Random, trials )
+
+#plotting the win-rate
+winrate_plot1 <- plot_winrate_f(df1)
+winrate_plot1
+```
 
 
+```{r}
+#plots of stratswitcher against WSLS
+df2 <- df_f(WSLSChoice, StratSwitcherChoice_against_WSLS, trials)
+plot_f(df2, WSLSChoice, StratSwitcherChoice_against_WSLS, trials )
 
-df2 <- tibble(
-  WSLSChoice,
-  StratSwitcherChoice_against_WSLS,
-  trials = seq(trials),
-  feedback = as.numeric(WSLSChoice == StratSwitcherChoice_against_WSLS)) #not using Other/Self
-  
-ggplot(df2) + 
-  theme_classic() + 
-  geom_line(color = "red", aes(trials, WSLSChoice)) + 
-  geom_line(color = "blue", aes(trials, StratSwitcherChoice_against_WSLS))
+#plotting the win-rate
+winrate_plot2 <- plot_winrate_f(df2)
+winrate_plot2
 ```
 

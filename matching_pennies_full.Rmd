@@ -113,6 +113,8 @@ plot_f(df, randomChoice, WSLSChoice, trials )
 #winrate plot of Random vs WSLS (WSLS is blue)
 winrate_plot <- plot_winrate_f(df)
 winrate_plot
+
+print(sum(df$feedback)) #how often player 2 wins (WSLS)
 ```
 ### ACTUAL competitor against Random & WSLS (Strategy Switcher)
 ```{r}
@@ -172,6 +174,8 @@ plot_f(df1, randomChoice, StratSwitcherChoice_against_Random, trials )
 #plotting the win-rate
 winrate_plot1 <- plot_winrate_f(df1)
 winrate_plot1
+
+print(sum(df1$feedback)) #how often player 2 wins (StratSwitcher)
 ```
 ```{r}
 #against WSLS (BLUE is the StratSwitcher)
@@ -181,6 +185,8 @@ plot_f(df2, WSLSChoice, StratSwitcherChoice_against_WSLS, trials )
 #plotting the win-rate
 winrate_plot2 <- plot_winrate_f(df2)
 winrate_plot2
+
+print(sum(df2$feedback)) #how often player 2 wins (StratSwitcher)
 ```
 
 ### WSLS Switching/modified (switch on wins and stay on loses occasionally)
@@ -235,6 +241,8 @@ plot_f(df1_2, randomChoice, WSLS_modified_against_Random, trials )
 #plotting the win-rate
 winrate_plot1_2 <- plot_winrate_f(df1_2)
 winrate_plot1_2
+
+print(sum(df1_2$feedback)) #how often player 2 wins (Modified WSLS)
 ```
 
 ```{r}
@@ -245,5 +253,7 @@ plot_f(df2_2, WSLSChoice, WSLS_modified_against_WSLS, trials )
 #plotting the win-rate
 winrate_plot2_2 <- plot_winrate_f(df2_2)
 winrate_plot2_2
+
+print(sum(df2_2$feedback)) #how often player 2 wins (Modified WSLS) (WORSE than normal WSLS)
 ```
 

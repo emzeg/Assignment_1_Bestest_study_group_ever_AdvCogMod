@@ -4,6 +4,9 @@ output: html_document
 date: "2026-02-13"
 ---
 
+# This does both of the 2 extra strats now (Stratswitcher after every 5 & WSLS with 'error')
+# Might need more plots/statistics for win rate etc. to report on
+
 ```{r}
 #install.packages("pacman")
 pacman::p_load(tidyverse, ggplot2, tibble)
@@ -160,9 +163,9 @@ StratSwitcherChoice_against_Random <- StratSwitcherChoice_f(Other_Player = rando
 StratSwitcherChoice_against_WSLS <- StratSwitcherChoice_f(Other_Player = WSLSChoice, rate = 0.5)
 ```
 
-#Shitty plots
+## PLOTS (of Stratswitcher)
 ```{r}
-#plots of stratswitcher against RANDOM (BLUE is the StratSwitcher)
+#against RANDOM (BLUE is the StratSwitcher)
 df1 <- df_f(randomChoice, StratSwitcherChoice_against_Random, trials)
 plot_f(df1, randomChoice, StratSwitcherChoice_against_Random, trials )
 
@@ -170,15 +173,77 @@ plot_f(df1, randomChoice, StratSwitcherChoice_against_Random, trials )
 winrate_plot1 <- plot_winrate_f(df1)
 winrate_plot1
 ```
-
-
 ```{r}
-#plots of stratswitcher against WSLS (BLUE is the StratSwitcher)
+#against WSLS (BLUE is the StratSwitcher)
 df2 <- df_f(WSLSChoice, StratSwitcherChoice_against_WSLS, trials)
 plot_f(df2, WSLSChoice, StratSwitcherChoice_against_WSLS, trials )
 
 #plotting the win-rate
 winrate_plot2 <- plot_winrate_f(df2)
 winrate_plot2
+```
+
+### WSLS Switching/modified (switch on wins and stay on loses occasionally)
+```{r}
+#10% chance to SWITCH after winning; 30% chance to STAY after losing
+#SHOULD these be different? (brain fried)
+WSLSAgent_modified_prob_f <- function(rate = 0.5, Other_Player, switchProbLose = 0.3, switchProbWin = 0.1, trials = 120) {
+  WSLSAgent_modified_choice <- rep(NA, trials)
+  WSLSAgent_modified_choice[1] <- RandomAgent_f(rate) # picks random on first trial
+  
+  for (i in 2:trials) {
+    #feedback based on the last trial
+    if (Other_Player[i - 1] == WSLSAgent_modified_choice[i - 1]) {
+      feedback <- 1
+    } else {
+      feedback <- 0
+    }
+    
+    #might switch, even if shouldnt (10% chance)
+    if (feedback == 1) {
+      if (runif(1) < switchProbWin) {
+        WSLSAgent_modified_choice[i] <- 1 - WSLSAgent_modified_choice[i - 1]
+        cat("won but still switching! ", WSLSAgent_modified_choice[i-1], " last choice; ", WSLSAgent_modified_choice[i], "this choice" , "\n")
+      } else {
+        WSLSAgent_modified_choice[i] <- WSLSAgent_modified_choice[i - 1]
+      }
+    } 
+    
+    #might switch, even if shouldnt (30% chance)
+    else {
+      if (runif(1) > switchProbLose) {
+        WSLSAgent_modified_choice[i] <- 1 - WSLSAgent_modified_choice[i - 1]
+      } else {
+        WSLSAgent_modified_choice[i] <- WSLSAgent_modified_choice[i - 1]
+        cat("lost but still staying! ", WSLSAgent_modified_choice[i-1], " last choice; ", WSLSAgent_modified_choice[i], "this choice" , "\n")
+      }
+    }
+  }
+  return(WSLSAgent_modified_choice)
+}
+
+WSLS_modified_against_Random <- WSLSAgent_modified_prob_f(rate = 0.5, Other_Player = randomChoice, switchProbLose = 0.3, switchProbWin = 0.1)
+WSLS_modified_against_WSLS <- WSLSAgent_modified_prob_f(rate = 0.5, Other_Player = WSLSChoice, switchProbLose = 0.3, switchProbWin = 0.1)
+```
+
+## PERFORMANCE PLOTS (of WSLS modified prob)
+```{r}
+#against RANDOM (BLUE is the WSLS modified)
+df1_2 <- df_f(randomChoice, WSLS_modified_against_Random, trials)
+plot_f(df1_2, randomChoice, WSLS_modified_against_Random, trials )
+
+#plotting the win-rate
+winrate_plot1_2 <- plot_winrate_f(df1_2)
+winrate_plot1_2
+```
+
+```{r}
+#against WSLS (BLUE is the WSLS MODIFIED)
+df2_2 <- df_f(WSLSChoice, WSLS_modified_against_WSLS, trials)
+plot_f(df2_2, WSLSChoice, WSLS_modified_against_WSLS, trials )
+
+#plotting the win-rate
+winrate_plot2_2 <- plot_winrate_f(df2_2)
+winrate_plot2_2
 ```
 

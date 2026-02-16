@@ -14,8 +14,8 @@ pacman::p_load(tidyverse, ggplot2, tibble)
 #the two default players (add 2 more)
 
 #entirely random
-RandomAgent_f <- function(input, parameters, rate){
-  choice <- rbinom(1,1,rate)
+RandomAgent_f <- function(rate){
+  choice <- rbinom(1,1, rate)
   return (choice)
 }
 
@@ -29,16 +29,16 @@ WSLSAgent_f <- function(prevChoice, feedback){
   return(choice)
 }
 
-#WSLS (switch on wins occasionally)
-WSLSAgent_f <- function(prevChoice, feedback, switchProb = 0.3){
+#WSLS (switch on wins and loses occasionally)
+WSLSAgent_f <- function(prevChoice, feedback, switchProblose = 0.3, switchProbwin = 0.1){
   if (feedback == 1){
-    if (runif(1) < switchProb){
+    if (runif(1) < switchProbwin){
       choice = (1 - prevChoice)
     } else {
       choice = prevChoice
     }
-  } else if (feedback == 0){
-        if (runif(1) < 0.15){ #using 15% instead of 30 so they don't consistently change between the feedback
+  } else if (feedback == 0){ #
+        if (runif(1) < switchProblose){ #using 15% instead of 30 so they don't consistently change between the feedback
       choice = (prevChoice)
     } else {
       choice = (1 - prevChoice)
@@ -59,20 +59,18 @@ rate <- 0.5
 
 #random
 for (t in seq(trials)){
-  randomChoice[t] <- RandomAgent_f(0, 0, rate)
+  randomChoice[t] <- RandomAgent_f(rate)
 }
 
 d1 <- tibble(trial = seq(trials), choice = randomChoice)
 p1 <- ggplot(d1, aes(trial,choice)) + geom_line() + theme_classic()
-
-p1
+#p1
 ```
 
 ```{r}
 #WSLS playing against Random
-
 WSLSChoice <- rep(NA, trials)
-WSLSChoice[1] <- RandomAgent_f(0,0, rate)
+WSLSChoice[1] <- RandomAgent_f(rate)
 
 for (i in 2:trials){
   if (randomChoice[i-1] == WSLSChoice[i-1]){
@@ -87,20 +85,17 @@ df <- tibble(
   trials = seq(trials),
   feedback = as.numeric(randomChoice == WSLSChoice))
   
-ggplot(df) + 
+plot1 <- ggplot(df) + 
   theme_classic() + 
   geom_line(color = "red", aes(trials, randomChoice)) + 
   geom_line(color = "blue", aes(trials, WSLSChoice))
 
 ```
 
-
-```{r}
-
 #WSLS (change occasionally)
-
+```{r}
 WSLS_switch_Choice <- rep(NA, trials)
-WSLS_switch_Choice[1] <- RandomAgent_f(0, 0, rate)
+WSLS_switch_Choice[1] <- RandomAgent_f(rate)
 
 for (i in 2:trials){
   if (randomChoice[i-1] == WSLS_switch_Choice[i-1]){
@@ -108,7 +103,7 @@ for (i in 2:trials){
   } else {
     feedback = 0
   }
-  WSLS_switch_Choice[i] <- WSLSAgent_f(WSLS_switch_Choice[i-1], feedback, switchProb = 0.3)
+  WSLS_switch_Choice[i] <- WSLSAgent_f(WSLS_switch_Choice[i-1], feedback, switchProbwin = 0.3, switchProblose = 0.1 )
 }
 
 
@@ -121,6 +116,32 @@ df <- tibble(
 ggplot(df) + 
   theme_classic() + 
   geom_line(color = "red", aes(trials, randomChoice)) + 
+  geom_line(color = "blue", aes(trials, WSLS_switch_Choice))
+```
+```{r}
+#Against normal WSLS
+WSLS_switch_Choice <- rep(NA, trials)
+WSLS_switch_Choice[1] <- RandomAgent_f(rate)
+
+for (i in 2:trials){
+  if (WSLSChoice[i-1] == WSLS_switch_Choice[i-1]){
+    feedback = 1
+  } else {
+    feedback = 0
+  }
+  WSLS_switch_Choice[i] <- WSLSAgent_f(WSLS_switch_Choice[i-1], feedback, switchProbwin = 0.3, switchProblose = 0.1 )
+}
+
+
+df <- tibble(
+  WSLSChoice,
+  WSLS_switch_Choice,
+  trials = seq(trials),
+  feedback = as.numeric(WSLSChoice == WSLS_switch_Choice))
+  
+ggplot(df) + 
+  theme_classic() + 
+  geom_line(color = "red", aes(trials, WSLSChoice)) + 
   geom_line(color = "blue", aes(trials, WSLS_switch_Choice))
 ```
 

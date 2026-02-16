@@ -13,7 +13,7 @@ pacman::p_load(tidyverse, ggplot2, tibble)
 set.seed(1234)
 ```
 
-Code from the Slides and implemented one player (stratswitcher); some of the default plots from the slides
+Code from the Slides and implemented two extra players (stratswitcher & modified WSLS); some of the default plots from the slides (UGLY)
 
 ```{r}
 #the two default players

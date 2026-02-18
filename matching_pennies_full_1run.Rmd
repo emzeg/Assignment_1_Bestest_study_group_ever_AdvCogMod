@@ -6,6 +6,7 @@ date: "2026-02-13"
 
 # This does both of the 2 extra strats now (Stratswitcher after every 5 & WSLS with 'error')
 # Might need more plots/statistics for win rate etc. to report on
+# Only does one run so reliant on rng
 
 ```{r}
 #install.packages("pacman")
@@ -205,6 +206,7 @@ winning_n_plot(df1, "Random", "Strategy Switcher", p2_color = "#FFC067")
 winrate_plot1 <- plot_winrate_f(df1)
 winrate_plot1
 ```
+
 ```{r}
 #against WSLS (BLUE is the StratSwitcher)
 df2 <- df_f(WSLSChoice, StratSwitcherChoice_against_WSLS, trials)
@@ -246,7 +248,7 @@ WSLSAgent_modified_prob_f <- function(rate = 0.5, Other_Player, switchProbLose =
     
     #might switch, even if shouldnt (30% chance)
     else {
-      if (runif(1) < switchProbLose) {
+      if (runif(1) > switchProbLose) {
         WSLSAgent_modified_choice[i] <- 1 - WSLSAgent_modified_choice[i - 1]
       } else {
         WSLSAgent_modified_choice[i] <- WSLSAgent_modified_choice[i - 1]

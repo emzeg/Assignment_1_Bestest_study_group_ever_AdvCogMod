@@ -1,0 +1,276 @@
+---
+title: "Penny-Matching 100 Runs"
+output: html_document
+date: "2026-02-18"
+---
+
+## 100 runs of 120 trials with their results averaged
+## Note: the custom agents are always P2, matcher, while WSLS can be both P1 (mismatcher) & P2 (matcher)
+## --> for the mismatcher trials, the feedback for WSLS is flipped
+
+#winrate is averaged per trial (each of the 120) across all runs, and then the cumulative sum is taken at the end
+#could also take the final win rate (trial 120) for each and cumulate that (but i think it shouldnt make much of a difference?)
+```{r}
+pacman::p_load(tidyverse, ggplot2, tibble, ggthemes)
+set.seed(1234)
+
+trials <- 120
+n_runs <- 100
+rate <- 0.5
+```
+
+```{r}
+# base agents
+RandomAgent_f <- function(rate){
+  choice <- rbinom(1, 1, rate)
+  return(choice)
+}
+
+WSLSAgent_f <- function(prevChoice, feedback){
+  if (feedback == 1){
+    choice = prevChoice
+  } else if (feedback == 0){
+    choice = (1 - prevChoice)
+  }
+  return(choice)
+}
+```
+
+
+```{r}
+#the 2 new agents, stratswitcher & wsls modified
+StratSwitcherChoice_f <- function(Other_Player, rate) {
+  StratSwitcherChoice <- rep(NA, trials)
+  StratSwitcherChoice[1] <- RandomAgent_f(rate)
+  ResultMemory <- rep(NA, 5) #only has a memory of 5
+  WSLS_strategy <- TRUE
+  
+  for (i in 2:trials) {
+    # P2 (StratSwitcher) wins on match, since always p2!!
+    if (Other_Player[i - 1] == StratSwitcherChoice[i - 1]) {
+      feedback = 1
+    } else {
+      feedback = 0
+    }
+    index <- ((i - 1) %% 5) + 1 #indexing all values to 1-5
+    ResultMemory[index] <- feedback
+    if (i %% 5 == 0 && sum(ResultMemory, na.rm = TRUE) < 3) {
+      if (WSLS_strategy == TRUE) {
+        WSLS_strategy = FALSE
+      } else {
+        WSLS_strategy = TRUE
+      }
+    }
+    if (WSLS_strategy == TRUE) {
+      StratSwitcherChoice[i] <- WSLSAgent_f(StratSwitcherChoice[i - 1], feedback)
+    } else {
+      StratSwitcherChoice[i] <- RandomAgent_f(rate)
+    }
+  }
+  return(StratSwitcherChoice)
+}
+
+#chance to switch even when winning = 0.1, change to stay even when losing = 0.3
+WSLSAgent_modified_prob_f <- function(rate = 0.5, Other_Player, switchProbLose = 0.3, switchProbWin = 0.1, trials = 120) {
+  WSLSAgent_modified_choice <- rep(NA, trials)
+  WSLSAgent_modified_choice[1] <- RandomAgent_f(rate)
+  
+  for (i in 2:trials) {
+    # P2 (WSLS modified) wins on match, always, since p2!
+    if (Other_Player[i - 1] == WSLSAgent_modified_choice[i - 1]) {
+      feedback <- 1
+    } else {
+      feedback <- 0
+    }
+    if (feedback == 1) {
+      if (runif(1) < switchProbWin) {
+        WSLSAgent_modified_choice[i] <- 1 - WSLSAgent_modified_choice[i - 1]
+      } else {
+        WSLSAgent_modified_choice[i] <- WSLSAgent_modified_choice[i - 1]
+      }
+    } else {
+      if (runif(1) > switchProbLose) {
+        WSLSAgent_modified_choice[i] <- 1 - WSLSAgent_modified_choice[i - 1]
+      } else {
+        WSLSAgent_modified_choice[i] <- WSLSAgent_modified_choice[i - 1]
+      }
+    }
+  }
+  return(WSLSAgent_modified_choice)
+}
+```
+
+```{r}
+# single-step versions of reactive agents (needed when both are reactive -> they have to play eachother trial-by-trial)
+StratSwitcherChoice_f_single <- function(prevChoice, feedback, ResultMemory, WSLS_strategy, i) {
+  index <- ((i - 1) %% 5) + 1
+  ResultMemory[index] <- feedback
+  
+  if (i %% 5 == 0 && sum(ResultMemory, na.rm = TRUE) < 3) {
+    if (WSLS_strategy == TRUE) {
+      WSLS_strategy = FALSE
+    } else {
+      WSLS_strategy = TRUE
+    }
+  }
+  
+  if (WSLS_strategy == TRUE) {
+    choice <- WSLSAgent_f(prevChoice, feedback)
+  } else {
+    choice <- RandomAgent_f(rate)
+  }
+  
+  return(list(choice = choice, ResultMemory = ResultMemory, WSLS_strategy = WSLS_strategy))
+}
+
+WSLSModified_f_single <- function(prevChoice, feedback, switchProbLose = 0.3, switchProbWin = 0.1) {
+  if (feedback == 1) {
+    if (runif(1) < switchProbWin) {
+      choice <- 1 - prevChoice
+    } else {
+      choice <- prevChoice
+    }
+  } else {
+    if (runif(1) > switchProbLose) {
+      choice <- 1 - prevChoice
+    } else {
+      choice <- prevChoice
+    }
+  }
+  return(choice)
+}
+```
+
+```{r}
+#overall results df
+results <- tibble(
+  matchup = character(),
+  run = integer(),
+  trial = integer(),
+  p1_win = numeric(),
+  p2_win = numeric()
+)
+
+#function to store per-trial win result for p2 to df
+run_and_store <- function(p1_choices, p2_choices, matchup_name, r) {
+  tibble(
+    matchup = matchup_name,
+    run = r,
+    trial = 1:trials,
+    p1_win = as.numeric(p1_choices != p2_choices), # P1 wins if P2 guesses wrong
+    p2_win = as.numeric(p1_choices == p2_choices)  # P2 wins if guess is correct
+  )
+}
+
+
+#run all the simulations
+for (r in 1:n_runs) {
+  
+  # Random vs WSLS (random goes first, then WSLS reacts)
+  rnd <- sapply(1:trials, function(x) RandomAgent_f(rate))
+  wsls <- c(RandomAgent_f(rate), rep(NA, trials - 1))
+  for (i in 2:trials) {
+    # WSLS is P2 (matcher)
+    feedback_wsls <- as.numeric(wsls[i-1] == rnd[i-1])
+    wsls[i] <- WSLSAgent_f(wsls[i-1], feedback_wsls)
+  }
+  results <- bind_rows(results, run_and_store(rnd, wsls, "Random vs WSLS", r))
+  
+  # Random vs StratSwitcher (random goes first, then StratSwitcher reacts)
+  rnd <- sapply(1:trials, function(x) RandomAgent_f(rate))
+  ss <- StratSwitcherChoice_f(rnd, rate)
+  results <- bind_rows(results, run_and_store(rnd, ss, "Random vs StratSwitcher", r))
+  
+  # WSLS vs StratSwitcher (both reactive, play turn by turn)
+  wsls <- rep(NA, trials)
+  ss <- rep(NA, trials)
+  wsls[1] <- RandomAgent_f(rate) #first choice random for both
+  ss[1] <- RandomAgent_f(rate)
+  ss_memory <- rep(NA, 5)
+  ss_strategy <- TRUE
+  for (i in 2:trials) {
+    feedback_wsls <- as.numeric(wsls[i-1] != ss[i-1]) # WSLS is P1 (mismatcher) (flipped feedback)
+    feedback_ss   <- as.numeric(ss[i-1] == wsls[i-1]) # StratSwitcher is P2 (matcher)
+    wsls[i] <- WSLSAgent_f(wsls[i-1], feedback_wsls)
+    ss_step <- StratSwitcherChoice_f_single(ss[i-1], feedback_ss, ss_memory, ss_strategy, i)
+    ss[i] <- ss_step$choice
+    ss_memory <- ss_step$ResultMemory
+    ss_strategy <- ss_step$WSLS_strategy
+    }
+  results <- bind_rows(results, run_and_store(wsls, ss, "WSLS vs StratSwitcher", r))
+  
+  # Random vs WSLS Modified (random goes first, then WSLS modified reacts)
+  rnd <- sapply(1:trials, function(x) RandomAgent_f(rate))
+  wsls_mod <- WSLSAgent_modified_prob_f(rate = rate, Other_Player = rnd)
+  results <- bind_rows(results, run_and_store(rnd, wsls_mod, "Random vs WSLS Modified", r))
+  
+  # WSLS vs WSLS Modified (both reactive, they play trial by trial)
+  wsls <- rep(NA, trials)
+  wsls_mod <- rep(NA, trials)
+  wsls[1] <- RandomAgent_f(rate) #first choice random for both
+  wsls_mod[1] <- RandomAgent_f(rate)
+  for (i in 2:trials) {
+    feedback_wsls <- as.numeric(wsls[i-1] != wsls_mod[i-1]) # WSLS is P1 mismatcher (flipped feedback)
+    feedback_wsls_mod  <- as.numeric(wsls_mod[i-1] == wsls[i-1]) # WSLS_mod is P2 matcher
+    wsls[i]     <- WSLSAgent_f(wsls[i-1], feedback_wsls) #goes first (wsls)
+    wsls_mod[i] <- WSLSModified_f_single(wsls_mod[i-1], feedback_wsls_mod) #wsls_mod reacts
+  }
+  results <- bind_rows(results, run_and_store(wsls, wsls_mod, "WSLS vs WSLS Modified", r))
+}
+```
+
+```{r}
+#average win rate per trial across runs, then cumulate
+results_mean <- results %>%
+  group_by(matchup, trial) %>%
+  summarise(
+    mean_p1_win = mean(p1_win),
+    mean_p2_win = mean(p2_win),
+    .groups = "drop"
+  ) %>%
+  group_by(matchup) %>%
+  mutate(
+    mean_p1_cumwinrate = cumsum(mean_p1_win) / trial,
+    mean_p2_cumwinrate = cumsum(mean_p2_win) / trial
+  ) %>%
+  ungroup()
+
+#plot cumulative win rate over trials for both players
+results_long <- results_mean %>%
+  pivot_longer(
+    cols = c(mean_p1_cumwinrate, mean_p2_cumwinrate),
+    names_to = "player",
+    values_to = "cumwinrate"
+  )
+
+ggplot(results_long, aes(x = trial, y = cumwinrate, color = player)) +
+  geom_line(linewidth = 1) +
+  geom_hline(yintercept = 0.5, linetype = "dashed", color = "black") +
+  facet_wrap(~matchup) +
+  theme_bw()+
+  labs(
+    title = "P1 and P2 Cumulative Win Rate over 100 Runs",
+    x = "Trial",
+    y = "Cumulative Win Rate",
+    color = "Player"
+  ) +
+    scale_color_manual(
+    values = c("mean_p1_cumwinrate" = "red", "mean_p2_cumwinrate" = "blue"),
+    labels = c("mean_p1_cumwinrate" = "Cumulative Winrate P1",
+               "mean_p2_cumwinrate" = "Cumulative Winrate P2")
+  )
+
+#overall average win rate per matchup
+results_mean %>%
+  filter(trial == trials) %>%
+  select(matchup, mean_p1_cumwinrate, mean_p2_cumwinrate) %>%
+  mutate(
+    `P1 WINRATE (cumulative)` = paste0(round(mean_p1_cumwinrate * 100, 1), "%"),
+    `P2 WINRATE (cumulative)` = paste0(round(mean_p2_cumwinrate * 100, 1), "%")
+  ) %>%
+  select(matchup, `P1 WINRATE (cumulative)`, `P2 WINRATE (cumulative)`) %>%
+  print()
+
+##no strat dominates, not even WSLS against anything? (outside of WSLS modified sucking)
+```
+

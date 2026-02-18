@@ -9,7 +9,7 @@ date: "2026-02-13"
 
 ```{r}
 #install.packages("pacman")
-pacman::p_load(tidyverse, ggplot2, tibble)
+pacman::p_load(tidyverse, ggplot2, tibble, paletteer, ggthemes)
 set.seed(1234)
 ```
 
@@ -171,6 +171,21 @@ StratSwitcherChoice_against_WSLS <- StratSwitcherChoice_f(Other_Player = WSLSCho
 df1 <- df_f(randomChoice, StratSwitcherChoice_against_Random, trials)
 plot_f(df1, randomChoice, StratSwitcherChoice_against_Random, trials )
 
+ggplot(df1) +
+  geom_bar(aes(x = trials, y = randomChoice, fill = "randomChoice"), stat = "identity") +
+  geom_bar(aes(x = trials, y = -StratSwitcherChoice_against_Random, fill = "StratSwitcherChoice_against_Random"), stat = "identity") +
+  theme_tufte() + 
+  labs(x = "Trials", y = "Win", fill = "Variable", title = "Random Choice vs Strategy Switcher") +
+  scale_fill_manual(values = c("randomChoice" = "#7df3e1", "StratSwitcherChoice_against_Random" = "lightgreen")) +
+  scale_y_continuous(limits = c(-1, 1), breaks = c(-1, 0, 1), labels = c("1", "0", "1")) +
+  theme(
+    plot.title = element_text(size = 16),
+    axis.title = element_text(size = 14),
+    axis.text = element_text(size = 12),
+    panel.grid.major = element_line(color = "gray90", linewidth = 0.5),
+    panel.grid.minor = element_blank()
+  )
+
 #plotting the win-rate
 winrate_plot1 <- plot_winrate_f(df1)
 winrate_plot1
@@ -181,6 +196,21 @@ print(sum(df1$feedback)) #how often player 2 wins (StratSwitcher)
 #against WSLS (BLUE is the StratSwitcher)
 df2 <- df_f(WSLSChoice, StratSwitcherChoice_against_WSLS, trials)
 plot_f(df2, WSLSChoice, StratSwitcherChoice_against_WSLS, trials )
+
+ggplot(df2) +
+  geom_bar(aes(x = trials, y = WSLSChoice, fill = "WSLSChoice"), stat = "identity") +
+  geom_bar(aes(x = trials, y = -StratSwitcherChoice_against_Random, fill = "StratSwitcherChoice_against_Random"), stat = "identity") +
+  theme_tufte() + 
+  labs(x = "Trials", y = "Win", fill = "Variable", title = "Normal WSLS vs Strategy Switcher") +
+  scale_fill_manual(values = c("WSLSChoice" = "#FFC067", "StratSwitcherChoice_against_Random" = "lightgreen")) +
+  scale_y_continuous(limits = c(-1, 1), breaks = c(-1, 0, 1), labels = c("1", "0", "1")) +
+  theme(
+    plot.title = element_text(size = 16),
+    axis.title = element_text(size = 14),
+    axis.text = element_text(size = 12),
+    panel.grid.major = element_line(color = "gray90", linewidth = 0.5),
+    panel.grid.minor = element_blank()
+  )
 
 #plotting the win-rate
 winrate_plot2 <- plot_winrate_f(df2)

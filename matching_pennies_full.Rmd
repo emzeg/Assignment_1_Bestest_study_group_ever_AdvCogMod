@@ -15,6 +15,8 @@ set.seed(1234)
 
 Code from the Slides and implemented two extra players (stratswitcher & modified WSLS); some of the default plots from the slides (UGLY)
 
+note: feedback is player1's wins (so the player that gets passed first/plays first)
+
 ```{r}
 #the two default players
 
@@ -57,7 +59,7 @@ plot_f <- function(df, player1, player2, trials) {
   return (plot)
 }
 
-#plot winrate
+#plot winrate (simple)
 plot_winrate_f <- function(df) {
   df <- df %>% 
   mutate(cumulative_rateSelf= cumsum(feedback) / seq_along(feedback),
@@ -65,8 +67,33 @@ plot_winrate_f <- function(df) {
 
   winrate_plot <- ggplot(df) + theme_classic() + geom_line(color="red", aes(trials, cumulative_rateSelf)) + geom_line(color="blue", aes(trials, cumulative_rateOther))
   
-  return (winrate_plot) #not returning the df for now? (though changing it)
+  return (winrate_plot)
 }
+
+#somewhat better plot for winrate
+winning_n_plot <- function(df, player1_name, player2_name, 
+                                p1_color = "#7df3e1", p2_color = "lightgreen") {
+  p1_wins <- sum(df$feedback)
+  p2_wins <- nrow(df) - p1_wins
+  
+  plot <- ggplot(df) +
+    geom_bar(aes(x = trials, y = feedback, fill = player1_name), stat = "identity") +
+    geom_bar(aes(x = trials, y = -(1 - feedback), fill = player2_name), stat = "identity") +
+    theme_tufte() +
+    labs(x = "Trials", y = "Winner", fill = "",
+         title = paste(player1_name, "vs", player2_name)) +
+    scale_fill_manual(
+      values = setNames(c(p1_color, p2_color), c(player1_name, player2_name)),
+      breaks = c(player1_name, player2_name),
+      labels = c(paste0(player1_name, " (", p1_wins, " wins)"),
+                 paste0(player2_name, " (", p2_wins, " wins)"))
+    ) +
+    scale_y_continuous(limits = c(-1, 1), breaks = c(-1, 0, 1),
+                       labels = c(player2_name, "0", player1_name))  # p2 is negative, p1 is positive
+  
+  return(plot)
+}
+
 
 ```
 
@@ -114,7 +141,7 @@ plot_f(df, randomChoice, WSLSChoice, trials )
 winrate_plot <- plot_winrate_f(df)
 winrate_plot
 
-print(sum(df$feedback)) #how often player 2 wins (WSLS)
+winning_n_plot(df, "Random", "WSLS")
 ```
 ### ACTUAL competitor against Random & WSLS (Strategy Switcher)
 ```{r}
@@ -171,52 +198,24 @@ StratSwitcherChoice_against_WSLS <- StratSwitcherChoice_f(Other_Player = WSLSCho
 df1 <- df_f(randomChoice, StratSwitcherChoice_against_Random, trials)
 plot_f(df1, randomChoice, StratSwitcherChoice_against_Random, trials )
 
-ggplot(df1) +
-  geom_bar(aes(x = trials, y = randomChoice, fill = "randomChoice"), stat = "identity") +
-  geom_bar(aes(x = trials, y = -StratSwitcherChoice_against_Random, fill = "StratSwitcherChoice_against_Random"), stat = "identity") +
-  theme_tufte() + 
-  labs(x = "Trials", y = "Win", fill = "Variable", title = "Random Choice vs Strategy Switcher") +
-  scale_fill_manual(values = c("randomChoice" = "#7df3e1", "StratSwitcherChoice_against_Random" = "lightgreen")) +
-  scale_y_continuous(limits = c(-1, 1), breaks = c(-1, 0, 1), labels = c("1", "0", "1")) +
-  theme(
-    plot.title = element_text(size = 16),
-    axis.title = element_text(size = 14),
-    axis.text = element_text(size = 12),
-    panel.grid.major = element_line(color = "gray90", linewidth = 0.5),
-    panel.grid.minor = element_blank()
-  )
+#winning n plot
+winning_n_plot(df1, "Random", "Strategy Switcher", p2_color = "#FFC067")
 
 #plotting the win-rate
 winrate_plot1 <- plot_winrate_f(df1)
 winrate_plot1
-
-print(sum(df1$feedback)) #how often player 2 wins (StratSwitcher)
 ```
 ```{r}
 #against WSLS (BLUE is the StratSwitcher)
 df2 <- df_f(WSLSChoice, StratSwitcherChoice_against_WSLS, trials)
 plot_f(df2, WSLSChoice, StratSwitcherChoice_against_WSLS, trials )
 
-ggplot(df2) +
-  geom_bar(aes(x = trials, y = WSLSChoice, fill = "WSLSChoice"), stat = "identity") +
-  geom_bar(aes(x = trials, y = -StratSwitcherChoice_against_Random, fill = "StratSwitcherChoice_against_Random"), stat = "identity") +
-  theme_tufte() + 
-  labs(x = "Trials", y = "Win", fill = "Variable", title = "Normal WSLS vs Strategy Switcher") +
-  scale_fill_manual(values = c("WSLSChoice" = "#FFC067", "StratSwitcherChoice_against_Random" = "lightgreen")) +
-  scale_y_continuous(limits = c(-1, 1), breaks = c(-1, 0, 1), labels = c("1", "0", "1")) +
-  theme(
-    plot.title = element_text(size = 16),
-    axis.title = element_text(size = 14),
-    axis.text = element_text(size = 12),
-    panel.grid.major = element_line(color = "gray90", linewidth = 0.5),
-    panel.grid.minor = element_blank()
-  )
+#winning n plot
+winning_n_plot(df2, "WSLS", "Strategy Switcher", p1_color = "lightgreen", p2_color = "#FFC067")
 
 #plotting the win-rate
 winrate_plot2 <- plot_winrate_f(df2)
 winrate_plot2
-
-print(sum(df2$feedback)) #how often player 2 wins (StratSwitcher)
 ```
 
 ### WSLS Switching/modified (switch on wins and stay on loses occasionally)
@@ -239,7 +238,7 @@ WSLSAgent_modified_prob_f <- function(rate = 0.5, Other_Player, switchProbLose =
     if (feedback == 1) {
       if (runif(1) < switchProbWin) {
         WSLSAgent_modified_choice[i] <- 1 - WSLSAgent_modified_choice[i - 1]
-        cat("won but still switching! ", WSLSAgent_modified_choice[i-1], " last choice; ", WSLSAgent_modified_choice[i], "this choice" , "\n")
+        #cat("won but still switching! ", WSLSAgent_modified_choice[i-1], " last choice; ", WSLSAgent_modified_choice[i], "this choice" , "\n")
       } else {
         WSLSAgent_modified_choice[i] <- WSLSAgent_modified_choice[i - 1]
       }
@@ -247,11 +246,11 @@ WSLSAgent_modified_prob_f <- function(rate = 0.5, Other_Player, switchProbLose =
     
     #might switch, even if shouldnt (30% chance)
     else {
-      if (runif(1) > switchProbLose) {
+      if (runif(1) < switchProbLose) {
         WSLSAgent_modified_choice[i] <- 1 - WSLSAgent_modified_choice[i - 1]
       } else {
         WSLSAgent_modified_choice[i] <- WSLSAgent_modified_choice[i - 1]
-        cat("lost but still staying! ", WSLSAgent_modified_choice[i-1], " last choice; ", WSLSAgent_modified_choice[i], "this choice" , "\n")
+        #cat("lost but still staying! ", WSLSAgent_modified_choice[i-1], " last choice; ", WSLSAgent_modified_choice[i], "this choice" , "\n")
       }
     }
   }
@@ -266,13 +265,14 @@ WSLS_modified_against_WSLS <- WSLSAgent_modified_prob_f(rate = 0.5, Other_Player
 ```{r}
 #against RANDOM (BLUE is the WSLS modified)
 df1_2 <- df_f(randomChoice, WSLS_modified_against_Random, trials)
-plot_f(df1_2, randomChoice, WSLS_modified_against_Random, trials )
+plot_f(df1_2, randomChoice, WSLS_modified_against_Random, trials)
+
+#winning n plot
+winning_n_plot(df1_2, "Random", "WSLS Modified", p2_color = "#ffdf00")
 
 #plotting the win-rate
 winrate_plot1_2 <- plot_winrate_f(df1_2)
 winrate_plot1_2
-
-print(sum(df1_2$feedback)) #how often player 2 wins (Modified WSLS)
 ```
 
 ```{r}
@@ -280,10 +280,11 @@ print(sum(df1_2$feedback)) #how often player 2 wins (Modified WSLS)
 df2_2 <- df_f(WSLSChoice, WSLS_modified_against_WSLS, trials)
 plot_f(df2_2, WSLSChoice, WSLS_modified_against_WSLS, trials )
 
+#winning n plot
+winning_n_plot(df2_2, "WSLS", "WSLS Modified", p1_color = "lightgreen",p2_color = "#ffdf00")
+
 #plotting the win-rate
 winrate_plot2_2 <- plot_winrate_f(df2_2)
 winrate_plot2_2
-
-print(sum(df2_2$feedback)) #how often player 2 wins (Modified WSLS) (WORSE than normal WSLS)
 ```
 

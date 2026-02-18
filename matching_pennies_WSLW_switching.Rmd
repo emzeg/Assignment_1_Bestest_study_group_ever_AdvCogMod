@@ -6,7 +6,7 @@ date: "2026-02-13"
 
 ```{r}
 #install.packages("pacman")
-pacman::p_load(tidyverse, ggplot2, tibble)
+pacman::p_load(tidyverse, ggplot2, tibble, paletteer, ggthemes)
 ```
 
 
@@ -38,7 +38,7 @@ WSLSAgent_f <- function(prevChoice, feedback, switchProblose = 0.3, switchProbwi
       choice = prevChoice
     }
   } else if (feedback == 0){ #
-        if (runif(1) < switchProblose){ #using 15% instead of 30 so they don't consistently change between the feedback
+        if (runif(1) < switchProblose){ 
       choice = (prevChoice)
     } else {
       choice = (1 - prevChoice)
@@ -68,6 +68,8 @@ p1 <- ggplot(d1, aes(trial,choice)) + geom_line() + theme_classic()
 ```
 
 ```{r}
+set.seed(2999)
+
 #WSLS playing against Random
 WSLSChoice <- rep(NA, trials)
 WSLSChoice[1] <- RandomAgent_f(rate)
@@ -79,21 +81,42 @@ for (i in 2:trials){
   WSLSChoice[i] <- WSLSAgent_f(WSLSChoice[i-1], feedback)
 }
 
-df <- tibble(
+df_basic <- tibble(
   randomChoice,
   WSLSChoice,
   trials = seq(trials),
   feedback = as.numeric(randomChoice == WSLSChoice))
   
-plot1 <- ggplot(df) + 
+plot1 <- ggplot(df_basic) + 
   theme_classic() + 
   geom_line(color = "red", aes(trials, randomChoice)) + 
   geom_line(color = "blue", aes(trials, WSLSChoice))
 
+
+ggplot(df_basic) +
+  geom_bar(aes(x = trials, y = randomChoice, fill = "randomChoice"), stat = "identity") +
+  geom_bar(aes(x = trials, y = -WSLS_switch_Choice, fill = "WSLSChoice"), stat = "identity") +
+  theme_tufte() + 
+  labs(x = "Trials", y = "Win", fill = "Variable", title = "Random Choice vs Normal WSLS") +
+  scale_fill_manual(values = c("randomChoice" = "#7df3e1", "WSLSChoice" = "#FFC067")) +
+  scale_y_continuous(limits = c(-1, 1), breaks = c(-1, 0, 1), labels = c("1", "0", "1")) +
+  theme(
+    plot.title = element_text(size = 16),
+    axis.title = element_text(size = 14),
+    axis.text = element_text(size = 12),
+    panel.grid.major = element_line(color = "gray90", linewidth = 0.5),
+    panel.grid.minor = element_blank()
+  )
+
+plot1
+count(df_basic, randomChoice) #58 wins out of 120
+count(df_basic, WSLSChoice) #56 wins out of 120
 ```
 
 #WSLS (change occasionally)
 ```{r}
+set.seed(3000)
+
 WSLS_switch_Choice <- rep(NA, trials)
 WSLS_switch_Choice[1] <- RandomAgent_f(rate)
 
@@ -103,23 +126,45 @@ for (i in 2:trials){
   } else {
     feedback = 0
   }
-  WSLS_switch_Choice[i] <- WSLSAgent_f(WSLS_switch_Choice[i-1], feedback, switchProbwin = 0.3, switchProblose = 0.1 )
+  WSLS_switch_Choice[i] <- WSLSAgent_f(WSLS_switch_Choice[i-1], feedback, switchProbwin = 0.1, switchProblose = 0.3 )
 }
 
 
-df <- tibble(
+df_random <- tibble(
   randomChoice,
   WSLS_switch_Choice,
   trials = seq(trials),
   feedback = as.numeric(randomChoice == WSLS_switch_Choice))
   
-ggplot(df) + 
+ggplot(df_random) + 
   theme_classic() + 
   geom_line(color = "red", aes(trials, randomChoice)) + 
   geom_line(color = "blue", aes(trials, WSLS_switch_Choice))
+
+ggplot(df_random) +
+  geom_bar(aes(x = trials, y = randomChoice, fill = "randomChoice"), stat = "identity") +
+  geom_bar(aes(x = trials, y = -WSLS_switch_Choice, fill = "WSLS_switch_Choice"), stat = "identity") +
+  theme_tufte() + 
+  labs(x = "Trials", y = "Win", fill = "Variable", title = "Random Choice vs Adjusted Ratios WSLS") +
+  scale_fill_manual(values = c("randomChoice" = "#7df3e1", "WSLS_switch_Choice" = "pink")) +
+  scale_y_continuous(limits = c(-1, 1), breaks = c(-1, 0, 1), labels = c("1", "0", "1")) +
+  theme(
+    plot.title = element_text(size = 16),
+    axis.title = element_text(size = 14),
+    axis.text = element_text(size = 12),
+    panel.grid.major = element_line(color = "gray90", linewidth = 0.5),
+    panel.grid.minor = element_blank()
+  )
+
+count(df_random, randomChoice) #58 wins out of 120
+count(df_random, WSLS_switch_Choice) #63 wins out of 120
 ```
 ```{r}
 #Against normal WSLS
+
+
+set.seed(3000)
+
 WSLS_switch_Choice <- rep(NA, trials)
 WSLS_switch_Choice[1] <- RandomAgent_f(rate)
 
@@ -129,7 +174,7 @@ for (i in 2:trials){
   } else {
     feedback = 0
   }
-  WSLS_switch_Choice[i] <- WSLSAgent_f(WSLS_switch_Choice[i-1], feedback, switchProbwin = 0.3, switchProblose = 0.1 )
+  WSLS_switch_Choice[i] <- WSLSAgent_f(WSLS_switch_Choice[i-1], feedback, switchProbwin = 0.1, switchProblose = 0.3 )
 }
 
 
@@ -139,9 +184,25 @@ df <- tibble(
   trials = seq(trials),
   feedback = as.numeric(WSLSChoice == WSLS_switch_Choice))
   
-ggplot(df) + 
-  theme_classic() + 
-  geom_line(color = "red", aes(trials, WSLSChoice)) + 
-  geom_line(color = "blue", aes(trials, WSLS_switch_Choice))
+
+
+ggplot(df) +
+  geom_bar(aes(x = trials, y = WSLSChoice, fill = "WSLSChoice"), stat = "identity") +
+  geom_bar(aes(x = trials, y = -WSLS_switch_Choice, fill = "WSLS_switch_Choice"), stat = "identity") +
+  theme_tufte() + 
+  labs(x = "Trials", y = "Win", fill = "Variable", title = "Normal WSLS vs Adjusted Ratios WSLS") +
+  scale_fill_manual(values = c("WSLSChoice" = "#FFC067", "WSLS_switch_Choice" = "pink")) +
+  scale_y_continuous(limits = c(-1, 1), breaks = c(-1, 0, 1), labels = c("1", "0", "1")) +
+  theme(
+    plot.title = element_text(size = 16),
+    axis.title = element_text(size = 14),
+    axis.text = element_text(size = 12),
+    panel.grid.major = element_line(color = "gray90", linewidth = 0.5),
+    panel.grid.minor = element_blank()
+  )
+  
+
+count(df, WSLSChoice) #64 wins out of 120
+count(df, WSLS_switch_Choice) #68 wins out of 120
 ```
 

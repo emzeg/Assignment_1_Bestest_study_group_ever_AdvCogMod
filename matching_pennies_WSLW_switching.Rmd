@@ -95,7 +95,7 @@ plot1 <- ggplot(df_basic) +
 
 ggplot(df_basic) +
   geom_bar(aes(x = trials, y = randomChoice, fill = "randomChoice"), stat = "identity") +
-  geom_bar(aes(x = trials, y = -WSLS_switch_Choice, fill = "WSLSChoice"), stat = "identity") +
+  geom_bar(aes(x = trials, y = -WSLSChoice, fill = "WSLSChoice"), stat = "identity") +
   theme_tufte() + 
   labs(x = "Trials", y = "Win", fill = "Variable", title = "Random Choice vs Normal WSLS") +
   scale_fill_manual(values = c("randomChoice" = "#7df3e1", "WSLSChoice" = "#FFC067")) +
@@ -159,6 +159,7 @@ ggplot(df_random) +
 count(df_random, randomChoice) #58 wins out of 120
 count(df_random, WSLS_switch_Choice) #63 wins out of 120
 ```
+
 ```{r}
 #Against normal WSLS
 
@@ -204,5 +205,74 @@ ggplot(df) +
 
 count(df, WSLSChoice) #64 wins out of 120
 count(df, WSLS_switch_Choice) #68 wins out of 120
+```
+
+```{r}
+StratSwitcherChoice_f <- function(Other_Player, rate) {
+  StratSwitcherChoice <- rep(NA, trials)
+  StratSwitcherChoice[1] <- RandomAgent_f(rate) #picks random on first trial
+  
+  ResultMemory <- rep(NA, 5)
+  WSLS_strategy <- TRUE
+  feedback = NA
+  
+  StratSwitcherChoice[1] <- RandomAgent_f(rate)
+  
+  for (i in 2:trials) {
+    #Starts off with checking feedback
+    if (Other_Player[i - 1] == StratSwitcherChoice[i - 1]) {
+      feedback = 1
+    } else {
+      feedback = 0
+    }
+    
+    #add feedback to memory (5 tiles long)
+    index <- ((i - 1) %% 5) + 1 #so its max 5
+    ResultMemory[index] <- feedback
+    
+    #switches choices every 5 trials if the last 5 trials have been bad
+    if (i %% 5 == 0 && sum(ResultMemory, na.rm = TRUE) < 3) {
+      #cat("Ahhh, I hate failure... switching; WSLS_strategy: ",WSLS_strategy,"trial number:" ,i, "win amount in last 5:", sum(ResultMemory, na.rm = TRUE), "\n")
+      if (WSLS_strategy == TRUE) {
+        WSLS_strategy = FALSE
+      } else {
+        WSLS_strategy = TRUE
+      }
+    }
+    
+    #either plays WSLS or Random otherwise
+    if (WSLS_strategy == TRUE) {
+      StratSwitcherChoice[i] <- WSLSAgent_f(StratSwitcherChoice[i - 1], feedback)
+    } else {
+      StratSwitcherChoice[i] <- RandomAgent_f(rate)
+    }
+  }
+  return (StratSwitcherChoice)
+}
+
+StratSwitcherChoice_against_AdjustedRatio <- StratSwitcherChoice_f(Other_Player = WSLS_switch_Choice, rate = 0.5)
+
+
+#final boss
+df1 <- df_f(WSLS_switch_Choice, StratSwitcherChoice_against_Random, trials)
+plot_f(df1, WSLS_switch_Choice, StratSwitcherChoice_against_Random, trials )
+
+ggplot(df1) +
+  geom_bar(aes(x = trials, y = WSLS_switch_Choice, fill = "WSLS_switch_Choice"), stat = "identity") +
+  geom_bar(aes(x = trials, y = -StratSwitcherChoice_against_Random, fill = "StratSwitcherChoice_against_Random"), stat = "identity") +
+  theme_tufte() + 
+  labs(x = "Trials", y = "Win", fill = "Variable", title = "Adjusted Ratio vs Strategy Switcher") +
+  scale_fill_manual(values = c("WSLS_switch_Choice" = "lightpink", "StratSwitcherChoice_against_Random" = "lightgreen")) +
+  scale_y_continuous(limits = c(-1, 1), breaks = c(-1, 0, 1), labels = c("1", "0", "1")) +
+  theme(
+    plot.title = element_text(size = 16),
+    axis.title = element_text(size = 14),
+    axis.text = element_text(size = 12),
+    panel.grid.major = element_line(color = "gray90", linewidth = 0.5),
+    panel.grid.minor = element_blank()
+  )
+
+count(df1, player1) #69 wins out of 120, this is stratswitch?
+count(df1, player2) #58 wins out of 120, i assume this is wsls
 ```
 

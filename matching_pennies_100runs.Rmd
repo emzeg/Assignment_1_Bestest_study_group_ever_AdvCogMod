@@ -8,7 +8,9 @@ date: "2026-02-18"
 ## Note: the custom agents are always P2, matcher, while WSLS can be both P1 (mismatcher) & P2 (matcher)
 ## --> for the mismatcher trials, the feedback for WSLS is flipped
 
-#winrate is averaged per trial (each of the 120) across all runs, and then the cumulative sum is taken at the end
+#winrate is averaged per trial (each of the 120) across all runs, and then their cumulative sum is taken at the end
+## --> this does mean that early trials have more influence than they should, but this doesnt matter with such high n (have checked)
+
 #could also take the final win rate (trial 120) for each and cumulate that (but i think it shouldnt make much of a difference?)
 ```{r}
 pacman::p_load(tidyverse, ggplot2, tibble, ggthemes)
@@ -39,6 +41,7 @@ WSLSAgent_f <- function(prevChoice, feedback){
 
 ```{r}
 #the 2 new agents, stratswitcher & wsls modified
+#these versions generate the whole game in one call (not fit for when the game has to be played turn-by-turn)
 StratSwitcherChoice_f <- function(Other_Player, rate) {
   StratSwitcherChoice <- rep(NA, trials)
   StratSwitcherChoice[1] <- RandomAgent_f(rate)
@@ -71,6 +74,7 @@ StratSwitcherChoice_f <- function(Other_Player, rate) {
 }
 
 #chance to switch even when winning = 0.1, change to stay even when losing = 0.3
+#this version also generates the game in one (so only really fit to play against random)
 WSLSAgent_modified_prob_f <- function(rate = 0.5, Other_Player, switchProbLose = 0.3, switchProbWin = 0.1, trials = 120) {
   WSLSAgent_modified_choice <- rep(NA, trials)
   WSLSAgent_modified_choice[1] <- RandomAgent_f(rate)
@@ -187,7 +191,7 @@ for (r in 1:n_runs) {
   wsls[1] <- RandomAgent_f(rate) #first choice random for both
   ss[1] <- RandomAgent_f(rate)
   ss_memory <- rep(NA, 5)
-  ss_strategy <- TRUE
+  ss_strategy <- TRUE #starts with WSLS = TRUE (wsls strategy)
   for (i in 2:trials) {
     feedback_wsls <- as.numeric(wsls[i-1] != ss[i-1]) # WSLS is P1 (mismatcher) (flipped feedback)
     feedback_ss   <- as.numeric(ss[i-1] == wsls[i-1]) # StratSwitcher is P2 (matcher)
@@ -220,7 +224,7 @@ for (r in 1:n_runs) {
 ```
 
 ```{r}
-#average win rate per trial across runs, then cumulate
+#average win rate per trial (all trials) across runs, then cumulate
 results_mean <- results %>%
   group_by(matchup, trial) %>%
   summarise(
@@ -235,7 +239,7 @@ results_mean <- results %>%
   ) %>%
   ungroup()
 
-#plot cumulative win rate over trials for both players
+#pivot longer for plotting, though some redundant rows exist
 results_long <- results_mean %>%
   pivot_longer(
     cols = c(mean_p1_cumwinrate, mean_p2_cumwinrate),
@@ -243,13 +247,14 @@ results_long <- results_mean %>%
     values_to = "cumwinrate"
   )
 
+#plot of winrates
 ggplot(results_long, aes(x = trial, y = cumwinrate, color = player)) +
   geom_line(linewidth = 1) +
   geom_hline(yintercept = 0.5, linetype = "dashed", color = "black") +
   facet_wrap(~matchup) +
   theme_bw()+
   labs(
-    title = "P1 and P2 Cumulative Win Rate over 100 Runs",
+    title = "P1 and P2 Cumulative Win Rate per trial, 100 simulations",
     x = "Trial",
     y = "Cumulative Win Rate",
     color = "Player"
@@ -271,6 +276,8 @@ results_mean %>%
   select(matchup, `P1 WINRATE (cumulative)`, `P2 WINRATE (cumulative)`) %>%
   print()
 
-##no strat dominates, not even WSLS against anything? (outside of WSLS modified sucking)
+##no strat truly dominates, not even WSLS against anything? (outside of WSLS modified being worse than pure WSLS)
+##Random vs strategic will always be fairly close to 50% (cant react to what doesnt make sense)
+##pure WSLS still best
 ```
 

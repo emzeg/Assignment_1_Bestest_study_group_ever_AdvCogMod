@@ -191,6 +191,7 @@ StratSwitcherChoice_f <- function(Other_Player, rate) {
 #play against both Random and WSLS
 StratSwitcherChoice_against_Random <- StratSwitcherChoice_f(Other_Player = randomChoice, rate = 0.5)
 StratSwitcherChoice_against_WSLS <- StratSwitcherChoice_f(Other_Player = WSLSChoice, rate = 0.5)
+StratSwitcherChoice_against_WSLS_modified <- StratSwitcherChoice_f(Other_Player = WSLSChoice, rate = 0.5)
 ```
 
 ## PLOTS (of Stratswitcher)
@@ -261,6 +262,7 @@ WSLSAgent_modified_prob_f <- function(rate = 0.5, Other_Player, switchProbLose =
 
 WSLS_modified_against_Random <- WSLSAgent_modified_prob_f(rate = 0.5, Other_Player = randomChoice, switchProbLose = 0.3, switchProbWin = 0.1)
 WSLS_modified_against_WSLS <- WSLSAgent_modified_prob_f(rate = 0.5, Other_Player = WSLSChoice, switchProbLose = 0.3, switchProbWin = 0.1)
+WSLS_modified_against_Switch <- WSLSAgent_modified_prob_f(rate = 0.5, Other_Player = StratSwitcherChoice_against_WSLS, switchProbLose = 0.3, switchProbWin = 0.1)
 ```
 
 ## PERFORMANCE PLOTS (of WSLS modified prob)
@@ -288,5 +290,63 @@ winning_n_plot(df2_2, "WSLS", "WSLS Modified", p1_color = "lightgreen",p2_color 
 #plotting the win-rate
 winrate_plot2_2 <- plot_winrate_f(df2_2)
 winrate_plot2_2
+```
+```{r}
+StratSwitcherChoice_f <- function(Other_Player, rate) {
+  StratSwitcherChoice <- rep(NA, trials)
+  StratSwitcherChoice[1] <- RandomAgent_f(rate) #picks random on first trial
+  
+  ResultMemory <- rep(NA, 5)
+  WSLS_strategy <- TRUE
+  feedback = NA
+  
+  StratSwitcherChoice[1] <- RandomAgent_f(rate)
+  
+  for (i in 2:trials) {
+    #Starts off with checking feedback
+    if (Other_Player[i - 1] == StratSwitcherChoice[i - 1]) {
+      feedback = 1
+    } else {
+      feedback = 0
+    }
+    
+    #add feedback to memory (5 tiles long)
+    index <- ((i - 1) %% 5) + 1 #so its max 5
+    ResultMemory[index] <- feedback
+    
+    #switches choices every 5 trials if the last 5 trials have been bad
+    if (i %% 5 == 0 && sum(ResultMemory, na.rm = TRUE) < 3) {
+      #cat("Ahhh, I hate failure... switching; WSLS_strategy: ",WSLS_strategy,"trial number:" ,i, "win amount in last 5:", sum(ResultMemory, na.rm = TRUE), "\n")
+      if (WSLS_strategy == TRUE) {
+        WSLS_strategy = FALSE
+      } else {
+        WSLS_strategy = TRUE
+      }
+    }
+    
+    #either plays WSLS or Random otherwise
+    if (WSLS_strategy == TRUE) {
+      StratSwitcherChoice[i] <- WSLSAgent_f(StratSwitcherChoice[i - 1], feedback)
+    } else {
+      StratSwitcherChoice[i] <- RandomAgent_f(rate)
+    }
+  }
+  return (StratSwitcherChoice)
+}
+
+StratSwitcherChoice_against_AdjustedRatio <- StratSwitcherChoice_f(Other_Player = WSLS_switch_Choice, rate = 0.5)
+
+
+#final boss
+df4 <- df_f(WSLS_switch_Choice, StratSwitcherChoice_against_Random, trials)
+plot_f(df4, WSLS_switch_Choice, StratSwitcherChoice_against_Random, trials )
+
+
+#winning n plot
+winning_n_plot(df4, "WSLS modified", "Strategy Switcher", p1_color = "lightpink", p2_color = "#FFC067")
+
+#plotting the win-rate
+winrate_plot4 <- plot_winrate_f(df4)
+winrate_plot4
 ```
 

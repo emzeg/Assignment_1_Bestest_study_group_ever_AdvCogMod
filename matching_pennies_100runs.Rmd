@@ -13,7 +13,7 @@ date: "2026-02-18"
 
 #could also take the final win rate (trial 120) for each and cumulate that (but i think it shouldnt make much of a difference?)
 ```{r}
-pacman::p_load(tidyverse, ggplot2, tibble, ggthemes)
+pacman::p_load(tidyverse, ggplot2, tibble, ggthemes, gt)
 set.seed(1234)
 
 trials <- 120
@@ -248,11 +248,11 @@ results_long <- results_mean %>%
   )
 
 #plot of winrates
-ggplot(results_long, aes(x = trial, y = cumwinrate, color = player)) +
+big_plot <- ggplot(results_long, aes(x = trial, y = cumwinrate, color = player)) +
   geom_line(linewidth = 1) +
   geom_hline(yintercept = 0.5, linetype = "dashed", color = "black") +
   facet_wrap(~matchup) +
-  theme_bw()+
+  theme_tufte()+
   labs(
     title = "P1 and P2 Cumulative Win Rate per trial, 100 simulations",
     x = "Trial",
@@ -260,10 +260,19 @@ ggplot(results_long, aes(x = trial, y = cumwinrate, color = player)) +
     color = "Player"
   ) +
     scale_color_manual(
-    values = c("mean_p1_cumwinrate" = "red", "mean_p2_cumwinrate" = "blue"),
+    values = c("mean_p1_cumwinrate" = "lightpink", "mean_p2_cumwinrate" = "lightgreen"),
     labels = c("mean_p1_cumwinrate" = "Cumulative Winrate P1",
-               "mean_p2_cumwinrate" = "Cumulative Winrate P2")
+               "mean_p2_cumwinrate" = "Cumulative Winrate P2") 
   )
+
+big_plot +   theme(
+    plot.title = element_text(size = 16),
+    axis.title = element_text(size = 14),
+    axis.text = element_text(size = 12),
+    panel.grid.major = element_line(color = "gray90", linewidth = 0.5),
+    panel.grid.minor = element_blank()
+  )
+  
 
 #overall average win rate per matchup
 results_mean %>%
@@ -274,7 +283,12 @@ results_mean %>%
     `P2 WINRATE (cumulative)` = paste0(round(mean_p2_cumwinrate * 100, 1), "%")
   ) %>%
   select(matchup, `P1 WINRATE (cumulative)`, `P2 WINRATE (cumulative)`) %>%
-  print()
+  gt() %>%
+  opt_table_font(
+    font = list(
+      google_font(name = 'serif')
+    )) %>%
+  tab_header(title = md("Percentage of Cumulative Win Rate"))
 
 ##no strat truly dominates, not even WSLS against anything? (outside of WSLS modified being worse than pure WSLS)
 ##Random vs strategic will always be fairly close to 50% (cant react to what doesnt make sense)

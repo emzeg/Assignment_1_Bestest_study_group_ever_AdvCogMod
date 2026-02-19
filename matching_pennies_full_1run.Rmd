@@ -138,7 +138,7 @@ df <- df_f(randomChoice, WSLSChoice, trials)
 plot_f(df, randomChoice, WSLSChoice, trials )
 ```
 ```{r}
-#winrate plot of Random vs WSLS (WSLS is blue)
+#winrate plot of Random vs WSLS (WSLS is green)
 winrate_plot <- plot_winrate_f(df)
 winrate_plot
 
@@ -270,7 +270,7 @@ df1_2 <- df_f(randomChoice, WSLS_modified_against_Random, trials)
 plot_f(df1_2, randomChoice, WSLS_modified_against_Random, trials)
 
 #winning n plot
-winning_n_plot(df1_2, "Random", "WSLS Modified", p2_color = "#ffdf00")
+winning_n_plot(df1_2, "Random", "WSLS Modified", p2_color = "lightpink")
 
 #plotting the win-rate
 winrate_plot1_2 <- plot_winrate_f(df1_2)
@@ -282,8 +282,8 @@ winrate_plot1_2
 df2_2 <- df_f(WSLSChoice, WSLS_modified_against_WSLS, trials)
 plot_f(df2_2, WSLSChoice, WSLS_modified_against_WSLS, trials )
 
-#winning n plot
-winning_n_plot(df2_2, "WSLS", "WSLS Modified", p1_color = "lightgreen",p2_color = "#ffdf00")
+#winning n l
+winning_n_plot(df2_2, "WSLS", "WSLS Modified", p1_color = "lightgreen",p2_color = "lightpink")
 
 #plotting the win-rate
 winrate_plot2_2 <- plot_winrate_f(df2_2)
